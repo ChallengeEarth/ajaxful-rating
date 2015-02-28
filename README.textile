@@ -1,10 +1,10 @@
-h1. Ajaxful Rating
+h1. Clone of gem Ajaxful Rating
 
 Provides a simple way to add rating functionality to your application.
 
-!http://s3.amazonaws.com/ember/v9SvvO3rdSkA40e1sXBf8JgpuaWCC0uB_o.png!
+h2. Compatibility with Rails 4 Added
 
-h2. Repository
+h2. Original Repository
 
 Find it at "github.com/edgarjs/ajaxful-rating":http://github.com/edgarjs/ajaxful-rating
 
