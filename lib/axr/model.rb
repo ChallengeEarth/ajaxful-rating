@@ -94,28 +94,16 @@ module AjaxfulRating # :nodoc:
 
     # Builds the DOM id attribute for the wrapper in view.
     def wrapper_dom_id(options = {})
-<<<<<<< HEAD
       options = options.symbolize_keys.slice(:small, :dimension)
       options = options.select { |k, v| v.present? or (v == false) }.map do |k, v|
-=======
-      options = options.to_hash.symbolize_keys.slice(:small, :dimension)
-      options = options.map do |k, v|
->>>>>>> rails4
         if k == :dimension
           v.to_s
         else
           v.to_s == 'true' ? k.to_s : "no-#{k}"
         end
       end
-<<<<<<< HEAD
       options.unshift("ajaxful_rating")
       ApplicationController.helpers.dom_id(self, options.sort.join('_'))
-=======
-      options = options.delete_if { |x| x.empty? }
-      prefix = "ajaxful_rating"
-      prefix << "_#{options.sort.join('_')}" unless options.empty?
-      ApplicationController.helpers.dom_id(self, prefix)
->>>>>>> rails4
     end
 
     # Returns an array with the users that have rated this object for the
@@ -284,13 +272,8 @@ module AjaxfulRating # :nodoc:
     end
 
     # Returns the name of the cache column for the passed dimension.
-<<<<<<< HEAD
     def caching_column_name(dimension = nil, to_nearest = nil)
       name = axr_config[:cache_column].to_s
-=======
-    def caching_column_name(dimension = nil)
-      name = axr_config(dimension)[:cache_column].to_s
->>>>>>> rails4
       name += "_#{dimension.to_s.underscore}" unless dimension.blank?
       name += "_#{to_nearest.to_s.gsub('.', '_').underscore}" unless to_nearest.blank?
       name
