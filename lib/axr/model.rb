@@ -9,17 +9,19 @@ module AjaxfulRating # :nodoc:
     # Extends the model to be easy ajaxly rateable.
     #
     # Options:
-    # * <tt>:stars</tt> Max number of stars that can be submitted.
-    # * <tt>:allow_update</tt> Set to true if you want users to be able to update their votes.
+    # * <tt>:stars</tt> Max number of stars that can be submitted. (default = 5)
+    # * <tt>:allow_update</tt> Set to true if you want users to be able to update their votes. (default = false)
     # * <tt>:cache_column</tt> Name of the column for storing the cached rating average.
+    # * <tt>:dimensions</tt> Array with dimensions.
+    # * <tt>:class_name</tt> Name of the class for Rates. (default = Rate)
     #
     # Example:
     #   class Article < ActiveRecord::Base
-    #     ajaxful_rateable :stars => 10, :cache_column => :custom_column
+    #     ajaxful_rateable :stars => 10, :cache_column => :custom_column, dimensions => ["quality", "price"], allow_update => false
     #   end
     def ajaxful_rateable(options = {})
       options[:class_name] ||= 'Rate'
-      has_many :rates_without_dimension, :as => :rateable, :class_name => options[:class_name], :dependent => :destroy, :conditions => {:dimension => nil}
+      has_many :rates_without_dimension, -> {:dimension.nil?}, :as => :rateable, :class_name => options[:class_name], :dependent => :destroy
       has_many :raters_without_dimension, :through => :rates_without_dimension, :source => :rater
 
       class << self
@@ -29,7 +31,7 @@ module AjaxfulRating # :nodoc:
           dimension = dimension.to_sym
           @axr_config[dimension] ||= {
             :stars => 5,
-            :allow_update => true,
+            :allow_update => false,
             :cache_column => :rating_average
           }
         end
@@ -39,8 +41,7 @@ module AjaxfulRating # :nodoc:
 
       if options[:dimensions].is_a?(Array)
         options[:dimensions].each do |dimension|
-          has_many "#{dimension}_rates", :dependent => :destroy,
-            :conditions => {:dimension => dimension.to_s}, :class_name => 'Rate', :as => :rateable
+          has_many "#{dimension}_rates", -> {:dimension == dimension.to_s}, :dependent => :destroy, :class_name => 'Rate', :as => :rateable
           has_many "#{dimension}_raters", :through => "#{dimension}_rates", :source => :rater
 
           axr_config(dimension).update(options)
