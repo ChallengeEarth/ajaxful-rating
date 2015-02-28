@@ -45,12 +45,12 @@ module AjaxfulRating # :nodoc:
       }.merge(remote_options)
       
       if @remote_options[:url].nil?
-        rateable_name = ActionController::RecordIdentifier.singular_class_name(rateable)
+        rateable_name = ActionController::RecordIdentifier.dom_class(rateable)
         url = "rate_#{rateable_name}_path"
         if @template.respond_to?(url)
           @remote_options[:url] = @template.send(url, rateable)
         else
-          raise(MissingRateRoute)
+          raise(Errors::MissingRateRoute)
         end
       end
     end
@@ -80,16 +80,16 @@ module AjaxfulRating # :nodoc:
         :width => "#{(value / rateable.class.max_stars.to_f) * 100}%",
         :zIndex => "%.f" % ( (rateable.class.max_stars/rateable.class.to_nearest) + 2 - (value/rateable.class.to_nearest))
       })
+
       @template.content_tag(:li) do
-        if !options[:force_static] && (user && options[:current_user] == user &&
-          (!already_rated || rateable.axr_config[:allow_update]))
+        if !options[:force_static] && (user && options[:current_user] == user && (!already_rated || rateable.axr_config(options[:dimension])[:allow_update]))
           link_star_tag(value, css_class)
         else
           @template.content_tag(:span, show_value, :class => css_class, :title => i18n(:current))
         end
       end
     end
-    
+
     def link_star_tag(value, css_class)
       query = {
         :stars => value,
@@ -97,13 +97,12 @@ module AjaxfulRating # :nodoc:
         :small => options[:small],
         :show_user_rating => options[:show_user_rating]
       }.to_query
-      config = {
-        :html => {
-          :class => css_class,
-          :title => i18n(:hover, value)
-        },
-        :url => "#{remote_options[:url]}",
-        :with => "'#{query}'"
+      
+      options = {
+        :class => css_class,
+        :title => i18n(:hover, value),
+        :method => remote_options[:method] || :post,
+        :remote => true
       }
       if options[:disable_remote]
         config[:url] += "?" + query
@@ -112,7 +111,7 @@ module AjaxfulRating # :nodoc:
         @template.link_to_remote(value, remote_options.merge(config))
       end
     end
-    
+
     def wrapper_tag
       @template.content_tag(:div, ratings_tag, :class => "ajaxful-rating-wrapper#{' show-user-rating' if @options[:show_user_rating]}",
         :id => rateable.wrapper_dom_id(options))

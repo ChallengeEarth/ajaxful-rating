@@ -20,30 +20,35 @@ module AjaxfulRating # :nodoc:
     #     ajaxful_rateable :stars => 10, :cache_column => :custom_column
     #   end
     def ajaxful_rateable(options = {})
-      has_many :rates_without_dimension, :as => :rateable, options.merge(:class_name => 'Rate'),
-        :dependent => :destroy, :conditions => {:dimension => nil}
+      has_many :rates_without_dimension, -> {:dimension.nil?}, :as => :rateable, :class_name => 'Rate', :dependent => :destroy
       has_many :raters_without_dimension, :through => :rates_without_dimension, :source => :rater
 
-      options[:dimensions].each do |dimension|
-        has_many "#{dimension}_rates", :dependent => :destroy,
-          :conditions => {:dimension => dimension.to_s}, :class_name => 'Rate', :as => :rateable
-        has_many "#{dimension}_raters", :through => "#{dimension}_rates", :source => :rater
-      end if options[:dimensions].is_a?(Array)
-
       class << self
-        def axr_config
-          @axr_config ||= {
+        def axr_config(dimension = nil)
+          dimension ||= :default
+          @axr_config ||= {}
+          dimension = dimension.to_sym
+          @axr_config[dimension] ||= {
             :stars => 5,
             :allow_update => true,
             :cache_column => :rating_average
           }
         end
-
+        
         alias_method :ajaxful_rating_options, :axr_config
       end
 
-      axr_config.update(options)
+      if options[:dimensions].is_a?(Array)
+        options[:dimensions].each do |dimension|
+          has_many "#{dimension}_rates", -> {:dimension == dimension.to_s}, :dependent => :destroy, :class_name => 'Rate', :as => :rateable
+          has_many "#{dimension}_raters", :through => "#{dimension}_rates", :source => :rater
 
+          axr_config(dimension).update(options)
+        end 
+      else
+          axr_config.update(options)
+      end
+      
       include AjaxfulRating::InstanceMethods
       extend AjaxfulRating::SingletonMethods
     end
@@ -58,8 +63,8 @@ module AjaxfulRating # :nodoc:
   module InstanceMethods
 
     # Proxy for axr_config singleton method.
-    def axr_config
-      self.class.axr_config
+    def axr_config(dimension = nil)
+      self.class.axr_config(dimension)
     end
 
     # Submits a new rate. Accepts a hash of tipical Ajax request.
@@ -72,13 +77,13 @@ module AjaxfulRating # :nodoc:
     #     # some page update here ...
     #   end
     def rate(stars, user, dimension = nil)
-      return false if (stars.to_i > self.class.max_stars)
-      raise AlreadyRatedError if (!self.class.axr_config[:allow_update] && rated_by?(user, dimension))
+      return false if (stars.to_i > self.class.max_stars) || (stars.to_i < 1)
+      raise Errors::AlreadyRatedError if (!self.class.axr_config(dimension)[:allow_update] && rated_by?(user, dimension))
 
-      rate = if self.class.axr_config[:allow_update] && rated_by?(user, dimension)
+      rate = if self.class.axr_config(dimension)[:allow_update] && rated_by?(user, dimension)
         rate_by(user, dimension)
       else
-        returning rates(dimension).build do |r|
+        rates(dimension).build.tap do |r|
           r.rater = user
         end
       end
@@ -89,16 +94,28 @@ module AjaxfulRating # :nodoc:
 
     # Builds the DOM id attribute for the wrapper in view.
     def wrapper_dom_id(options = {})
+<<<<<<< HEAD
       options = options.symbolize_keys.slice(:small, :dimension)
       options = options.select { |k, v| v.present? or (v == false) }.map do |k, v|
+=======
+      options = options.to_hash.symbolize_keys.slice(:small, :dimension)
+      options = options.map do |k, v|
+>>>>>>> rails4
         if k == :dimension
           v.to_s
         else
           v.to_s == 'true' ? k.to_s : "no-#{k}"
         end
       end
+<<<<<<< HEAD
       options.unshift("ajaxful_rating")
       ApplicationController.helpers.dom_id(self, options.sort.join('_'))
+=======
+      options = options.delete_if { |x| x.empty? }
+      prefix = "ajaxful_rating"
+      prefix << "_#{options.sort.join('_')}" unless options.empty?
+      ApplicationController.helpers.dom_id(self, prefix)
+>>>>>>> rails4
     end
 
     # Returns an array with the users that have rated this object for the
@@ -132,7 +149,7 @@ module AjaxfulRating # :nodoc:
     # Based on if the user has already rated the object or the
     # :allow_update option is enabled.
     def can_rate_by?(user, dimension = nil)
-      !rated_by?(user, dimension) || self.class.axr_config[:allow_update]
+      !rated_by?(user, dimension) || self.class.axr_config(dimension)[:allow_update]
     end
 
     # Instance's total rates.
@@ -198,8 +215,8 @@ module AjaxfulRating # :nodoc:
     # Change it by passing the :stars option to +ajaxful_rateable+
     #
     #   ajaxful_rateable :stars => 10
-    def max_stars
-      axr_config[:stars]
+    def max_stars(dimension = nil)
+      axr_config(dimension)[:stars]
     end
 
     # Allow stars to be set and averaged to nearest whatever. eg. 0.5 for the nearest half-star
@@ -267,8 +284,13 @@ module AjaxfulRating # :nodoc:
     end
 
     # Returns the name of the cache column for the passed dimension.
+<<<<<<< HEAD
     def caching_column_name(dimension = nil, to_nearest = nil)
       name = axr_config[:cache_column].to_s
+=======
+    def caching_column_name(dimension = nil)
+      name = axr_config(dimension)[:cache_column].to_s
+>>>>>>> rails4
       name += "_#{dimension.to_s.underscore}" unless dimension.blank?
       name += "_#{to_nearest.to_s.gsub('.', '_').underscore}" unless to_nearest.blank?
       name
